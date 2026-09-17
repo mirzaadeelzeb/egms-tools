@@ -1,0 +1,33 @@
+# EGMS products are large and carry their own licence terms — never commit them.
+*.csv
+*.tif
+*.tiff
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.gpkg
+!tests/**/*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Output
+*.png
+!docs/*.png
+*.pdf
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
