@@ -157,3 +157,101 @@ def plot_velocity_histogram(gdf, column: str = "mean_velocity", ax=None, bins: i
     ax.legend(frameon=False, fontsize=9)
     ax.grid(alpha=0.25, axis="y")
     return ax
+
+
+def publication_map(gdf, column: str = "mean_velocity", bbox=None, vmax: float | None = None,
+                    title: str | None = None, subtitle: str | None = None,
+                    labels=None, credit: str | None = None, figsize=(12, 8.4), dpi: int = 200,
+                    point_size: float = 0.5, cmap: str = "RdBu"):
+    """Build a finished, client-ready velocity map.
+
+    :func:`plot_velocity_map` draws points onto an axis you own. This assembles a
+    whole figure — title block, land-mark labels, a colour bar that says which
+    way is down, and a data credit line — so that the output can be handed over
+    without further editing.
+
+    Parameters
+    ----------
+    gdf : GeoDataFrame
+        EGMS points. Needs ``latitude``/``longitude`` columns, which every EGMS
+        product carries.
+    bbox : tuple, optional
+        ``(min_lon, min_lat, max_lon, max_lat)`` to crop to.
+    vmax : float, optional
+        Colour scale runs from ``-vmax`` to ``+vmax``. Left out, it is taken
+        from the 98th percentile of ``|values|``, rounded up to a whole mm.
+
+        Choose this deliberately. A scale much wider than the data flattens
+        everything to one colour; a scale much tighter makes near-stable ground
+        look alarming. State the value in the caption either way.
+    labels : sequence, optional
+        ``(name, lon, lat)`` triples, or ``(name, lon, lat, below)`` to put the
+        text under the marker instead of above it.
+    credit : str, optional
+        Footer line. Defaults to the EGMS attribution, which the licence expects
+        you to keep.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    import numpy as np
+
+    data = gdf
+    if bbox is not None:
+        min_lon, min_lat, max_lon, max_lat = bbox
+        data = data[data.longitude.between(min_lon, max_lon)
+                    & data.latitude.between(min_lat, max_lat)]
+    if data.empty:
+        raise ValueError("no points inside bbox — check the order: (min_lon, min_lat, max_lon, max_lat)")
+
+    values = np.asarray(data[column], dtype=float)
+    if vmax is None:
+        finite = values[np.isfinite(values)]
+        vmax = float(np.ceil(np.percentile(np.abs(finite), 98))) if finite.size else 1.0
+        vmax = max(vmax, 1.0)
+
+    # Draw the strongest signals last so that a dense stable background cannot
+    # bury the very thing the map exists to show.
+    order = np.argsort(np.abs(values))
+    data = data.iloc[order]
+
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+    fig.patch.set_facecolor("white")
+    ax = fig.add_axes([0.075, 0.115, 0.80, 0.755])
+    ax.set_facecolor("#efefef")
+
+    sc = ax.scatter(data.longitude, data.latitude, c=data[column], cmap=cmap,
+                    vmin=-vmax, vmax=vmax, s=point_size, linewidths=0, rasterized=True)
+
+    cax = fig.add_axes([0.885, 0.20, 0.019, 0.58])
+    cb = fig.colorbar(sc, cax=cax, extend="both")
+    cb.set_label("Velocity along satellite line of sight  (mm/year)\n"
+                 "red = moving away        white = stable        blue = moving towards",
+                 fontsize=9.8, labelpad=12)
+    cb.ax.tick_params(labelsize=9.5)
+
+    for label in labels or []:
+        name, lon, lat = label[0], label[1], label[2]
+        below = label[3] if len(label) > 3 else False
+        ax.plot(lon, lat, "o", ms=5, mfc="none", mec="black", mew=1.3, zorder=5)
+        ax.annotate(name, (lon, lat), xytext=(0, -18 if below else 12),
+                    textcoords="offset points", ha="center", fontsize=11,
+                    fontweight="bold", zorder=6)
+
+    if title:
+        fig.text(0.075, 0.945, title, fontsize=15, fontweight="bold", ha="left")
+    if subtitle:
+        fig.text(0.075, 0.905, subtitle, fontsize=10.2, color="#4a4a4a", ha="left")
+
+    ax.set_xlabel("Longitude (\u00b0E)", fontsize=10.5)
+    ax.set_ylabel("Latitude (\u00b0N)", fontsize=10.5)
+    ax.tick_params(labelsize=9.5)
+    # Degrees of longitude shrink with latitude; without this the map is stretched.
+    ax.set_aspect(1 / np.cos(np.radians(float(data.latitude.mean()))))
+    ax.grid(alpha=0.14, linewidth=0.5)
+
+    fig.text(0.075, 0.038,
+             credit or "Data: Copernicus European Ground Motion Service (EGMS) \u2014 free and open",
+             fontsize=8.8, color="#555555", ha="left")
+    return fig

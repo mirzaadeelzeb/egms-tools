@@ -136,6 +136,18 @@ egms aggregate tile.csv bridges.gpkg bridge_id --buffer 30 -o bridges_motion.csv
 egms decompose ascending.csv descending.csv -o decomposed.csv
 ```
 
+`egms map` renders a finished figure — title block, place labels, a colour bar
+that says which way is down, and the data credit — ready to hand to a client
+without further editing:
+
+```bash
+egms map tile.csv -o naples.png   --bbox 14.19 40.78 14.47 40.93   --vmax 6   --title "Ground motion around Naples, 2020-2024"   --subtitle "Sentinel-1 ascending track 044, 211 passes"   --label "NAPLES:14.268,40.851" --label "VESUVIUS:14.426,40.821"
+```
+
+Set `--vmax` deliberately. A scale much wider than the data flattens everything
+to one colour; a scale much tighter makes near-stable ground look alarming.
+Whatever you choose, state it in the caption.
+
 ---
 
 ## Testing

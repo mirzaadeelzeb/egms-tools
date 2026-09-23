@@ -38,6 +38,7 @@ from .plot import (
     plot_timeseries_envelope,
     plot_velocity_histogram,
     plot_velocity_map,
+    publication_map,
 )
 from .timeseries import cumulative_displacement, detect_breakpoint, fit_velocities, fit_velocity
 
@@ -64,6 +65,7 @@ __all__ = [
     "plot_timeseries_envelope",
     "plot_velocity_histogram",
     "plot_velocity_map",
+    "publication_map",
     "points_in_polygons",
     "project_to_los",
     "read_egms",

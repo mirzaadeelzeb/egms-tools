@@ -97,6 +97,40 @@ def _cmd_decompose(args) -> int:
     return 0
 
 
+def _cmd_map(args) -> int:
+    import matplotlib
+    matplotlib.use("Agg")
+
+    from .io import read_egms
+    from .plot import publication_map
+
+    points = read_egms(args.path, columns=["latitude", "longitude", args.velocity_column])
+
+    labels = []
+    for spec in args.label or []:
+        try:
+            name, coords = spec.split(":", 1)
+            lon, lat = (float(v) for v in coords.split(","))
+        except ValueError:
+            print(f"error: --label expects 'Name:lon,lat', got {spec!r}", file=sys.stderr)
+            return 2
+        labels.append((name, lon, lat))
+
+    try:
+        fig = publication_map(
+            points, column=args.velocity_column, bbox=args.bbox, vmax=args.vmax,
+            title=args.title, subtitle=args.subtitle, labels=labels, credit=args.credit,
+            point_size=args.point_size, dpi=args.dpi,
+        )
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    fig.savefig(args.output, facecolor="white")
+    print(f"wrote {args.output}", file=sys.stderr)
+    return 0
+
+
 def _write_table(table, output) -> None:
     if output:
         table.to_csv(output, index=False)
@@ -146,6 +180,24 @@ def build_parser() -> argparse.ArgumentParser:
     decompose_cmd.add_argument("--dsc-incidence", type=float, default=39.0)
     decompose_cmd.add_argument("--dsc-heading", type=float, default=193.0)
     decompose_cmd.set_defaults(func=_cmd_decompose)
+
+    map_cmd = subparsers.add_parser("map", help="render a finished velocity map as an image")
+    map_cmd.add_argument("path")
+    map_cmd.add_argument("-o", "--output", default="velocity_map.png")
+    map_cmd.add_argument("--velocity-column", default="mean_velocity")
+    map_cmd.add_argument("--bbox", type=float, nargs=4,
+                         metavar=("MIN_LON", "MIN_LAT", "MAX_LON", "MAX_LAT"),
+                         help="crop to this window")
+    map_cmd.add_argument("--vmax", type=float,
+                         help="colour scale runs -VMAX..+VMAX (default: 98th percentile)")
+    map_cmd.add_argument("--title")
+    map_cmd.add_argument("--subtitle")
+    map_cmd.add_argument("--label", action="append", metavar="NAME:LON,LAT",
+                         help="mark a place; repeat for several")
+    map_cmd.add_argument("--credit", help="footer line (keep the EGMS attribution)")
+    map_cmd.add_argument("--point-size", type=float, default=0.5)
+    map_cmd.add_argument("--dpi", type=int, default=200)
+    map_cmd.set_defaults(func=_cmd_map)
 
     return parser
 
