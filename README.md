@@ -125,6 +125,18 @@ Velocity is a diverging quantity where zero is meaningful, so the colour scale i
 
 `plot_velocity_histogram` marks the mode of the distribution. A well-referenced tile peaks near zero; a clearly offset peak usually means a reference-frame problem rather than regional ground motion, and is worth resolving before interpreting anything.
 
+
+### Interactive web maps
+
+`examples/interactive_map.py` writes a self-contained HTML map — pan, zoom, satellite basemap, and a popup with the velocity on every point. It needs nothing installed on the other end, so it can be emailed as an attachment or linked from a report.
+
+```bash
+pip install leafmap
+python examples/interactive_map.py tile.csv --bbox 14.19 40.78 14.47 40.93 --vmax 6 -o naples.html
+```
+
+It subsamples deliberately. A browser will not draw a million markers, so the default budget of 12,000 goes two thirds to the points that are actually moving — keeping the fastest — and one third to stable ground picked at random. Dropping the stable points entirely would make a quiet city look like a sinking one, which is the kind of map that loses a client the first time someone checks it.
+
 ---
 
 ## Command line
